@@ -21,6 +21,36 @@ def create_category(session: Session, category: Category):
     return _create_if_not_exists(session, category, category.name)
 
 
+def update_category(session: Session, category_id: int, new_name: str):
+    statement = select(Category).where(Category.id == category_id)
+    result = session.exec(statement)
+    category = result.first()
+    if not category:
+        raise ValueError(f"Category with id {category_id} not found")
+    category.name = new_name
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+
+def delete_category(session: Session, category_id: int):
+    statement = select(Category).where(Category.id == category_id)
+    result = session.exec(statement)
+    category = result.first()
+    if not category:
+        raise ValueError(f"Category with id {category_id} not found")
+    session.delete(category)
+    session.commit()
+    return True
+
+
+def get_all_categories(session: Session):
+    statement = select(Category)
+    result = session.exec(statement)
+    return result.all()
+
+
 def create_account(session: Session, account: Account):
     return _create_if_not_exists(session, account, account.name)
 
