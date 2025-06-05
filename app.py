@@ -2,7 +2,8 @@
 Main Streamlit application entry point.
 """
 import streamlit as st
-from fin.ui import components, charts
+from fin.ui import components, charts, auth
+from fin import config, service
 
 
 def main():
@@ -13,10 +14,34 @@ def main():
         page_icon="💰",
         layout="wide"
     )
+
+    cfg = config.get_config()
+
+    # Check authentication for non-dev environments
+    if cfg["ENV"] != "dev":
+        if not auth.is_authenticated():
+            auth.render_login_form()
+            return
+    
+    # Main application (only shown when authenticated or in dev mode)
+    render_main_app()
+
+
+def render_main_app():
+    """Render the main application interface."""
+    cfg = config.get_config()
     
     # Sidebar navigation
     st.sidebar.title("Fin")
     st.sidebar.subheader("your personal finance tracker")
+    
+    # Show current user and logout button (only in non-dev mode)
+    if cfg["ENV"] != "dev":
+        username = st.session_state.get("username", "Unknown")
+        st.sidebar.write(f"👤 Logged in as: **{username}**")
+        auth.render_logout_button()
+        st.sidebar.divider()
+    
     selected_tab = st.sidebar.selectbox(
         "Choose a section:",
         ["📊 Overview", "📁 Import Data", "🏷️ Category Management"]
