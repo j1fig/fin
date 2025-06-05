@@ -2,7 +2,7 @@
 Main Streamlit application entry point.
 """
 import streamlit as st
-from fin.ui import components, charts, auth
+from fin.ui import components, charts, auth, analytics
 from fin import config, service
 
 
@@ -18,10 +18,9 @@ def main():
     cfg = config.get_config()
 
     # Check authentication for non-dev environments
-    if cfg["ENV"] != "dev":
-        if not auth.is_authenticated():
-            auth.render_login_form()
-            return
+    if cfg["ENV"] != "dev" and not auth.is_authenticated():
+        auth.render_login_form()
+        return
     
     # Main application (only shown when authenticated or in dev mode)
     render_main_app()
@@ -44,12 +43,14 @@ def render_main_app():
     
     selected_tab = st.sidebar.selectbox(
         "Choose a section:",
-        ["📊 Overview", "📁 Import Data", "🏷️ Category Management"]
+        ["📊 Overview", "📈 Analytics", "📁 Import Data", "🏷️ Category Management"]
     )
     
     # Route to appropriate tab
     if selected_tab == "📊 Overview":
         render_overview_tab()
+    elif selected_tab == "📈 Analytics":
+        analytics.render_analytics_tab()
     elif selected_tab == "📁 Import Data":
         render_import_tab()
     elif selected_tab == "🏷️ Category Management":
