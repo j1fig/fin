@@ -9,33 +9,39 @@ DATABASE_PATH = 'storage/fin.db'
 def render_accounts_table():
     """Render the accounts table."""
     with sqlite3.connect(DATABASE_PATH) as con:
-        st.text("Accounts")
         df = pd.read_sql('SELECT * from "account"', con)
-        st.table(df)
         return df
 
 
 def build_transaction_query(account_id, selected_category, category_options):
     """Build SQL query and parameters based on filters."""
+
     if selected_category == "All Categories":
-        query = '''
+        base_query = '''
         SELECT t.*, c.name as category_name 
         FROM "transaction" t 
         LEFT JOIN "category" c ON t.category_id = c.id 
-        WHERE t.account_id = ?
         '''
-        params = (account_id,)
+        params = ()
+        if account_id is not None:
+            base_query += " WHERE t.account_id = ?"
+            params += (account_id,)
     else:
         category_id = category_options[selected_category]
-        query = '''
+        base_query = '''
         SELECT t.*, c.name as category_name 
         FROM "transaction" t 
         LEFT JOIN "category" c ON t.category_id = c.id 
-        WHERE t.account_id = ? AND t.category_id = ?
+        WHERE t.category_id = ?
         '''
-        params = (account_id, category_id)
+        params = (category_id,)
+        if account_id is not None:
+            base_query += " AND t.account_id = ?"
+            params += (account_id,)
     
-    return query, params
+    base_query += " ORDER BY t.created_at DESC"
+    
+    return base_query, params
 
 
 def render_transactions_table(query, params):
@@ -48,15 +54,17 @@ def render_transactions_table(query, params):
             return
             
         # Prepare data for display
+        account_id_to_name = {id_: name for name, id_ in service.get_all_accounts().items()}
         df['amount'] = df['amount_cents'] / 100
         df['date'] = pd.to_datetime(df['created_at']).dt.strftime('%Y-%m-%d')
+        df['account_name'] = df['account_id'].map(account_id_to_name)
         
         # Get all available categories for the dropdown
         all_categories = service.get_category_names_list()
         
         # Prepare display dataframe
-        display_df = df[['id', 'date', 'description', 'amount', 'category_name']].copy()
-        display_df.columns = ['ID', 'Date', 'Description', 'Amount (€)', 'Category']
+        display_df = df[['date', 'description', 'amount', 'category_name', 'account_name', 'id']].copy()
+        display_df.columns = ['Date', 'Description', 'Amount (€)', 'Category', 'Account', 'ID']
         
         # Fill null categories
         display_df['Category'] = display_df['Category'].fillna('Uncategorized')
@@ -106,7 +114,17 @@ def render_transactions_table(query, params):
                     options=all_categories + ['Uncategorized'],
                     required=True,
                     width="medium"
-                )
+                ),
+                "Account": st.column_config.TextColumn(
+                    "Account",
+                    disabled=True,
+                    width="small"
+                ),
+                "ID": st.column_config.TextColumn(
+                    "ID",
+                    disabled=True,
+                    width="small"
+                ),
             },
             hide_index=True,
             use_container_width=True,

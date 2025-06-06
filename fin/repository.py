@@ -1,6 +1,6 @@
 from sqlmodel import SQLModel, select
 
-from fin.models import Account, Category, Transaction
+from fin.models import Account, Category, Transaction, Import
 from fin.db import Session
 
 
@@ -15,6 +15,19 @@ def _create_if_not_exists(session: Session, instance: SQLModel, name: str):
     session.commit()
     session.refresh(instance)
     return instance
+
+
+def create_import(session: Session, import_: Import):
+    # if import already exists, fail here - this prevents duplicate imports for now.
+    statement = select(Import).where(Import.sha256 == import_.sha256)
+    result = session.exec(statement)
+    existing_import = result.first()
+    if existing_import:
+        raise ValueError(f"Import {import_.file_name} with sha256 {import_.sha256} already exists")
+    session.add(import_)
+    session.commit()
+    session.refresh(import_)
+    return import_
 
 
 def create_category(session: Session, category: Category):
@@ -53,6 +66,12 @@ def get_all_categories(session: Session):
 
 def create_account(session: Session, account: Account):
     return _create_if_not_exists(session, account, account.name)
+
+
+def get_all_accounts(session: Session):
+    statement = select(Account)
+    result = session.exec(statement)
+    return result.all()
 
 
 def create_transaction(session: Session, transaction: Transaction):

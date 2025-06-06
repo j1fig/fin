@@ -96,8 +96,13 @@ def render_filter_controls(accounts_df):
     """Render filter controls and return selected values."""
     st.text("Transactions")
     
-    # Account filter
-    account_id = st.selectbox("Account", accounts_df['id'])
+    # Account filter - create options with "All Accounts" as default
+    account_options = {"All Accounts": None}
+    for _, row in accounts_df.iterrows():
+        account_options[row['name']] = row['id']
+    
+    selected_account = st.selectbox("Account", options=list(account_options.keys()))
+    account_id = account_options[selected_account]
     
     # Category filter
     category_options = service.get_categories_for_management()

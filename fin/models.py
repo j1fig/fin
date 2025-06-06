@@ -75,3 +75,17 @@ class Transaction(SQLModel, table=True):
     category_id: int | None = Field(default=None, foreign_key="category.id")
     account_id: int | None = Field(default=None, foreign_key="account.id")
     recurring_rule_id: int | None = Field(default=None, foreign_key="recurring_rule.id")
+    import_id: int | None = Field(default=None, foreign_key="import.id")
+
+
+class Import(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    created_at: datetime = Field(
+        sa_column=Column(
+            DateTime(timezone=True),
+            nullable=False
+        ),
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
+    file_name: str
+    sha256: str = Field(unique=True)

@@ -12,5 +12,7 @@ wheels/
 # Transaction files
 *.csv
 *.tsv
+*.pdf
 
 storage/
+config/
