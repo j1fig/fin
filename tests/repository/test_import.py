@@ -6,10 +6,12 @@ import pytest
 
 from fin.models import Import
 
+
 @pytest.fixture
 def import_repository(repository_factory):
     """Fixture for import repository."""
     return repository_factory.import_repository()
+
 
 # Import Repository Tests
 def test_create_import(import_repository):

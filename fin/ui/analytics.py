@@ -1,11 +1,10 @@
-import sqlite3
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
-DATABASE_PATH = 'storage/fin.db'
+from fin import service
 
 
 def render_analytics_tab():
@@ -32,7 +31,8 @@ def render_analytics_tab():
         return
     
     # Get analytics data
-    spending_data = get_category_spending_data(start_date, end_date)
+    spending_data_list = service.get_category_spending_data(start_date, end_date)
+    spending_data = pd.DataFrame(spending_data_list)
     
     if spending_data.empty:
         st.info("No transaction data found for the selected date range.")
@@ -46,25 +46,7 @@ def render_analytics_tab():
     render_monthly_trends(start_date, end_date)
 
 
-def get_category_spending_data(start_date, end_date):
-    """Get category spending data for the specified date range."""
-    with sqlite3.connect(DATABASE_PATH) as con:
-        query = """
-        SELECT 
-            COALESCE(c.name, 'Uncategorized') as category,
-            SUM(CASE WHEN t.amount_cents < 0 THEN ABS(t.amount_cents) ELSE 0 END) / 100.0 as expenses,
-            SUM(CASE WHEN t.amount_cents > 0 THEN t.amount_cents ELSE 0 END) / 100.0 as income,
-            COUNT(t.id) as transaction_count
-        FROM "transaction" t
-        LEFT JOIN "category" c ON t.category_id = c.id
-        WHERE DATE(t.created_at) BETWEEN ? AND ?
-        GROUP BY c.name
-        HAVING expenses > 0 OR income > 0
-        ORDER BY expenses DESC
-        """
-        
-        df = pd.read_sql(query, con, params=(start_date, end_date))
-        return df
+# Removed - now using service.get_category_spending_data()
 
 
 def render_spending_overview(spending_data):
@@ -178,22 +160,8 @@ def render_monthly_trends(start_date, end_date):
     """Render monthly spending trends by category."""
     st.subheader("📈 Monthly Trends")
     
-    with sqlite3.connect(DATABASE_PATH) as con:
-        query = """
-        SELECT 
-            strftime('%Y-%m', t.created_at) as month,
-            COALESCE(c.name, 'Uncategorized') as category,
-            SUM(CASE WHEN t.amount_cents < 0 THEN ABS(t.amount_cents) ELSE 0 END) / 100.0 as expenses
-        FROM "transaction" t
-        LEFT JOIN "category" c ON t.category_id = c.id
-        WHERE DATE(t.created_at) BETWEEN ? AND ?
-          AND t.amount_cents < 0
-        GROUP BY strftime('%Y-%m', t.created_at), c.name
-        HAVING expenses > 0
-        ORDER BY month, expenses DESC
-        """
-        
-        trends_df = pd.read_sql(query, con, params=(start_date, end_date))
+    trends_data_list = service.get_monthly_spending_trends(start_date, end_date)
+    trends_df = pd.DataFrame(trends_data_list)
     
     if trends_df.empty:
         st.info("No expense trend data found for the selected period.")
